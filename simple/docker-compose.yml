@@ -1,21 +1,26 @@
 version: '2'
 services:
   buildbot:
-    image: buildbot/buildbot-master:master
+    build:
+      context: ./buildbot-master
     env_file:
         - db.env
     environment:
         - BUILDBOT_CONFIG_DIR=config
-        - BUILDBOT_CONFIG_URL=https://github.com/buildbot/buildbot-docker-example-config/archive/master.tar.gz
+        - BUILDBOT_CONFIG_URL=https://github.com/a114m/buildbot-docker-example-config/archive/master.tar.gz
         - BUILDBOT_WORKER_PORT=9989
-        - BUILDBOT_WEB_URL=http://localhost:8080/
+        - BUILDBOT_WEB_URL=http://a114m.me/
         - BUILDBOT_WEB_PORT=8080
     links:
       - db
     depends_on:
       - db
     ports:
-      - "8080:8080"
+      - "80:8080"
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/usr/bin/docker:/usr/bin/docker:ro'
+      - '/usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro'
   db:
     env_file:
         - db.env
@@ -24,13 +29,20 @@ services:
         - 5432
 
   worker:
-    image: "buildbot/buildbot-worker:master"
+    build:
+      context: ./buildbot-worker
+      args:
+        - DOCKER_GID
     environment:
         BUILDMASTER: buildbot
         BUILDMASTER_PORT: 9989
         WORKERNAME: example-worker
         WORKERPASS: pass
         WORKER_ENVIRONMENT_BLACKLIST: DOCKER_BUILDBOT* BUILDBOT_ENV_* BUILDBOT_1* WORKER_ENVIRONMENT_BLACKLIST
-
+    privileged: true
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/usr/bin/docker:/usr/bin/docker:ro'
+      - '/usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro'
     links:
         - buildbot
